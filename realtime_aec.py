@@ -100,7 +100,7 @@ parser.add_argument("--model", "-m", type=str, default="./DTLN-aec/pretrained_mo
                     help="path to DTLN-aec model without extension")
 parser.add_argument("--use-aec", type=bool, default=True,
                     help="whether to use acoustic echo cancellation")
-parser.add_argument("--latency", type=float, default=0.2,
+parser.add_argument("--latency", type=float, default=0.05,
                     help="latency of sound device")
 parser.add_argument("--threads", type=int, default=1,
                     help="number of threads for interpreter")
@@ -236,15 +236,20 @@ processing_times = []
 # Custom Ctrl+C handler
 def signal_handler(sig, frame):
     global interrupted
-    print("\nInterrupted by user, finishing recording...")
+    print("\nInterrupted by user, saving immediately...")
     interrupted = True
     
     # Set these events to signal all threads to finish
     recording_finished.set()
     playback_finished.set()
+    processing_finished.set()  # Force processing to stop immediately too
+    
+    # Immediately stop the stream if it's running
+    if 'stream' in globals() and stream is not None and stream.active:
+        stream.stop()
     
     # Let the main thread handle the cleanup and saving
-    # Ctrl+C caught here, but actual exit happens in the finally block
+    # Actual exit happens in the finally block
 
 # Register the signal handler
 signal.signal(signal.SIGINT, signal_handler)
@@ -414,17 +419,10 @@ def audio_callback(indata, outdata, frames, time, status):
         # Ensure correct shape for output
         outdata[:, 0] = playback_data.reshape(-1)
         
-        # Store playback data (reference audio) as loopback
+        # Store playback data (reference audio) as loopback - always store at original sample rate
         if save_additional:
-            # Make sure we don't record duplicate data if queue processing is slow
-            if len(loopback_audio) < len(mic_audio) + 10:
-                # Since playback_data is at output_sr, we need to make sure the sample rates match
-                if output_sr == input_sr:
-                    loopback_audio.append(playback_data.copy())
-                else:
-                    # Resample playback data to match microphone sample rate for proper alignment
-                    resampled_playback = resampy.resample(playback_data, output_sr, input_sr)
-                    loopback_audio.append(resampled_playback)
+            # Always store the exact playback data at output_sr
+            loopback_audio.append(playback_data.copy())
                 
     except queue.Empty:
         # If no more playback data, output zeros and set finished
@@ -485,20 +483,18 @@ def save_processed_audio():
     else:
         print("No microphone audio to save")
     
-    # Always save loopback signal
+    # Always save loopback signal - keep the entire signal!
     if loopback_audio:
         try:
             # Concatenate all loopback blocks
             loopback_result = np.concatenate(loopback_audio)
             
-            # Check size and match to mic_result if needed
-            if 'mic_result' in locals() and len(loopback_result) > len(mic_result):
-                print(f"Trimming loopback data to match microphone length: {len(mic_result)} samples")
-                loopback_result = loopback_result[:len(mic_result)]
+            # Don't trim the loopback to match mic_result anymore
+            # This was causing the loopback to be shorter
             
-            # Save to file (using input_sr since we've resampled the reference to match it)
-            sf.write(args.loopback_path, loopback_result, input_sr)
-            print(f"Loopback signal saved to {args.loopback_path}")
+            # Save to file using the output_sr (the original sample rate of the audio)
+            sf.write(args.loopback_path, loopback_result, output_sr)
+            print(f"Loopback signal saved to {args.loopback_path} ({len(loopback_result)/output_sr:.2f}s)")
             results.append(f"Loopback: {args.loopback_path}")
         except Exception as e:
             print(f"Error saving loopback signal: {e}")
@@ -589,28 +585,35 @@ finally:
         print("Stopping audio stream...")
         stream.stop()
     
-    # Force recording_finished if not already set (in case of error)
-    if not recording_finished.is_set():
-        recording_finished.set()
+    # Force all finished flags to be set (in case of error)
+    recording_finished.set()
+    playback_finished.set()
     
-    # Wait for processing thread to finish with a longer timeout when interrupted
-    if proc_thread.is_alive():
-        timeout = 10.0 if interrupted else 5.0  # Give more time if user interrupted
-        print(f"Waiting for processing to complete (timeout: {timeout:.1f}s)...")
-        processing_finished.wait(timeout=timeout)
-        
-        # If still not finished, we still want to save what we have
-        if not processing_finished.is_set():
-            print("Processing thread did not finish in time, saving collected data anyway...")
-    
-    # If we were interrupted, try to process any remaining data in the queue
     if interrupted:
+        # When interrupted, don't wait for processing thread - save immediately
+        processing_finished.set()
+        print("Saving collected data immediately...")
+    else:
+        # Only wait for processing thread if not interrupted
+        if proc_thread.is_alive():
+            print("Waiting for processing to complete (timeout: 5.0s)...")
+            processing_finished.wait(timeout=5.0)
+            
+            # If still not finished, we still want to save what we have
+            if not processing_finished.is_set():
+                print("Processing thread did not finish in time, saving collected data anyway...")
+    
+    # Skip processing remaining data if interrupted to exit faster
+    if interrupted and False:  # Disabled for faster exit
         process_remaining_data()
     
     # Save all audio data
     print("Saving audio files...")
     save_processed_audio()
     
+    if interrupted:
+        print("Exit due to user interrupt.")
+        
     # Print performance statistics if measuring
     if args.measure and processing_times:
         avg_time = sum(processing_times) / len(processing_times)
