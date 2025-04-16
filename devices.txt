@@ -1,0 +1,104 @@
+vlad@vlad-ThinkPad-E14:~/Target/DTLN-AEC$ python3 list_devices.py 
+================================================================================
+Available Audio Devices:
+================================================================================
+
+Input & Output Devices:
+--------------------------------------------------------------------------------
+ID 0: HDA Intel PCH: CX8070 Analog (hw:0,0)
+    Input channels: 2
+    Output channels: 2
+    Default samplerate: 48000.0
+
+ID 4: Loopback: PCM (hw:2,0)
+    Input channels: 32
+    Output channels: 32
+    Default samplerate: 44100.0
+
+ID 5: Loopback: PCM (hw:2,1)
+    Input channels: 32
+    Output channels: 32
+    Default samplerate: 44100.0
+
+ID 6: sysdefault
+    Input channels: 128
+    Output channels: 128
+    Default samplerate: 48000.0
+
+ID 12: samplerate
+    Input channels: 128
+    Output channels: 128
+    Default samplerate: 44100.0
+
+ID 13: speexrate
+    Input channels: 128
+    Output channels: 128
+    Default samplerate: 44100.0
+
+ID 14: pulse
+    Input channels: 32
+    Output channels: 32
+    Default samplerate: 44100.0
+
+ID 15: upmix
+    Input channels: 8
+    Output channels: 8
+    Default samplerate: 48000.0
+
+ID 16: vdownmix
+    Input channels: 6
+    Output channels: 6
+    Default samplerate: 48000.0
+
+ID 18: default
+    Input channels: 32
+    Output channels: 32
+    Default samplerate: 44100.0
+
+
+Input-only Devices:
+--------------------------------------------------------------------------------
+
+Output-only Devices:
+--------------------------------------------------------------------------------
+ID 1: HDA Intel PCH: HDMI 0 (hw:0,3)
+    Output channels: 8
+    Default samplerate: 44100.0
+
+ID 2: HDA Intel PCH: HDMI 1 (hw:0,7)
+    Output channels: 8
+    Default samplerate: 44100.0
+
+ID 3: HDA Intel PCH: HDMI 2 (hw:0,8)
+    Output channels: 8
+    Default samplerate: 44100.0
+
+ID 7: front
+    Output channels: 2
+    Default samplerate: 48000.0
+
+ID 8: surround40
+    Output channels: 2
+    Default samplerate: 48000.0
+
+ID 9: surround51
+    Output channels: 2
+    Default samplerate: 48000.0
+
+ID 10: surround71
+    Output channels: 2
+    Default samplerate: 48000.0
+
+ID 11: hdmi
+    Output channels: 8
+    Default samplerate: 44100.0
+
+ID 17: dmix
+    Output channels: 2
+    Default samplerate: 48000.0
+
+
+Default Devices:
+--------------------------------------------------------------------------------
+Default Input:  ID 18 - default
+Default Output: ID 18 - default

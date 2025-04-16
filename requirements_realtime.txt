@@ -1,0 +1,8 @@
+sounddevice>=0.4.3
+soundfile>=0.10.3
+numpy>=1.19.5
+resampy>=0.2.2
+# You need either tflite-runtime or tensorflow, but not both
+# Uncomment one of the following lines:
+# tflite-runtime>=2.5.0  # Recommended for embedded devices
+# tensorflow==2.5.0  # Use this for desktop systems if tflite-runtime is not available 
